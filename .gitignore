@@ -1,0 +1,73 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+*.pdb
+
+# Cargo
+Cargo.lock
+Cargo.toml.bak
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Risc0 specific
+.risc0/
+risc0-build/
+
+# ZK proof artifacts
+proofs/
+*.proof
+*.receipt
+
+# Benchmark results
+criterion/
+
+# Test artifacts
+test-results/
+coverage/
+
+# Documentation build
+docs/_build/
+
+# Backup files
+*.bak
+*.backup
+
+# Node modules (if any frontend)
+node_modules/
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Local development
+local/
+dev/ 
