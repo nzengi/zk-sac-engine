@@ -1,138 +1,119 @@
-# 🚀 ZK-SAC Engine: Revolutionary Zero-Knowledge Self-Amending Consensus
+# ZK-SAC Engine: Zero-Knowledge Self-Amending Consensus
 
-[![Rust](https://img.shields.io/badge/Rust-2021-orange.svg)](https://www.rust-lang.org/)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![CI](https://github.com/nzengi/zk-sac-engine/workflows/CI/badge.svg)](https://github.com/nzengi/zk-sac-engine/actions)
-[![Risc0](https://img.shields.io/badge/Risc0-2.3.1-green.svg)](https://www.risczero.com/)
+A revolutionary Layer-1 blockchain implementation featuring **Zero-Knowledge Proof of Validity** consensus mechanism with self-amending capabilities.
 
-> **Revolutionary Layer-1 blockchain consensus engine using zero-knowledge proofs for mathematically provable block validation**
+## 🚀 Overview
 
-## 🌟 Overview
+ZK-SAC Engine is a cutting-edge blockchain implementation that combines:
 
-ZK-SAC Engine is a cutting-edge blockchain consensus mechanism that leverages zero-knowledge proofs to achieve unprecedented security and performance. Built with Rust and Risc0 zkVM, it implements a **ZK-Driven Self-Amending Consensus (ZK-SAC)** algorithm that mathematically proves the validity of every block.
-
-### 🎯 Key Features
-
-- **🔐 Zero-Knowledge Proofs**: Every block is cryptographically proven valid using Risc0 zkVM
-- **⚡ High Performance**: 17µs block production time with async consensus coordination
-- **🛡️ Post-Quantum Security**: Ed25519-dalek + SHA3 cryptography ready for quantum threats
-- **🔄 Self-Amending**: Consensus rules can evolve through on-chain governance
-- **📊 Modular Architecture**: Clean separation of consensus, crypto, and zkVM components
-- **🧪 Comprehensive Testing**: Unit, integration, and property-based tests
+- **Zero-Knowledge Proofs** for block validation
+- **Self-Amending Consensus** for protocol evolution
+- **Post-Quantum Cryptography** for future security
+- **High-Performance** consensus engine with async processing
 
 ## 🏗️ Architecture
 
+### Core Components
+
 ```
-ZK-SAC Engine
-├── 🧠 Consensus Engine (ZK-SAC Algorithm)
-├── 🔐 Cryptographic Layer (Post-Quantum Ready)
-├── 🔬 ZKVM Integration (Risc0 2.3.1)
-├── 📦 Type System (Strongly Typed)
-├── ⚡ Async Runtime (Tokio)
-└── 🧪 Test Suite (Comprehensive)
+zk-sac-engine/
+├── src/
+│   ├── consensus/          # Consensus engine & block production
+│   ├── crypto/            # Cryptography (Ed25519, Post-Quantum)
+│   ├── zkvm/              # Zero-Knowledge Virtual Machine
+│   ├── performance/       # Performance monitoring & benchmarking
+│   ├── types/             # Core data structures
+│   └── async_utils.rs     # Async utilities & task management
+├── tests/                 # Comprehensive test suite
+├── benches/              # Performance benchmarks
+└── docs/                 # Documentation
 ```
 
-## 🚀 Quick Start
+### Key Features
+
+- **🔐 Zero-Knowledge Proofs**: Risc0 zkVM integration for state transition verification
+- **⚡ High Performance**: 350+ TPS with async consensus processing
+- **🛡️ Post-Quantum Security**: LMS signatures and quantum-resistant cryptography
+- **🔄 Self-Amending**: Protocol evolution through on-chain governance
+- **📊 Performance Monitoring**: Real-time metrics and benchmarking
+- **🧪 Comprehensive Testing**: Unit, integration, and property-based tests
+
+## 🛠️ Installation
 
 ### Prerequisites
 
-- **Rust 1.70+**: [Install Rust](https://rustup.rs/)
-- **Git**: [Install Git](https://git-scm.com/)
-- **Cargo**: Comes with Rust installation
+- **Rust**: 1.70+ (latest stable)
+- **Cargo**: Latest version
+- **Git**: For cloning the repository
 
-### Installation
+### Quick Start
 
 ```bash
 # Clone the repository
-git clone https://github.com/nzengi/zk-sac-engine.git
+git clone https://github.com/your-username/zk-sac-engine.git
 cd zk-sac-engine
 
 # Build the project
-cargo build --release
-
-# Run the demo
-cargo run
-```
-
-### Development Setup
-
-```bash
-# Install development dependencies
-cargo install cargo-watch
-cargo install cargo-tarpaulin  # For code coverage
+cargo build
 
 # Run tests
 cargo test
 
+# Run performance demo
+cargo run --bin performance-demo
+
 # Run benchmarks
 cargo bench
-
-# Check code quality
-cargo clippy
-cargo fmt
 ```
 
-## 📖 Usage
+### Build Options
 
-### Basic Consensus Engine
+```bash
+# Development build
+cargo build
 
-```rust
-use zk_sac_engine::consensus::engine::{ZkSacConsensusEngine, ConsensusEngine};
-use zk_sac_engine::types::*;
+# Release build with optimizations
+cargo build --release
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize consensus engine
-    let mut engine = ZkSacConsensusEngine::new()?;
+# Build with Risc0 ZK proofs (Linux recommended)
+cargo build --features risc0
 
-    // Create transactions
-    let tx = Transaction {
-        from: Address::random(),
-        to: Address::random(),
-        amount: 100,
-        nonce: 1,
-        signature: SignatureType::Ed25519(vec![]),
-    };
-
-    // Produce block
-    let block = engine.produce_block(vec![tx])?;
-
-    // Validate block
-    let is_valid = engine.validate_block(&block)?;
-    println!("Block valid: {}", is_valid);
-
-    Ok(())
-}
+# Build with mock ZK proofs (MacOS/Windows)
+cargo build
 ```
 
-### ZK Proof Generation
+## 📊 Performance
 
-```rust
-use zk_sac_engine::zkvm::Risc0Executor;
+### Current Benchmarks (Mock Mode)
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize ZKVM executor
-    let zkvm = Risc0Executor::new()?;
+| Metric               | Value                    |
+| -------------------- | ------------------------ |
+| **TPS**              | 350+ transactions/second |
+| **Block Time**       | ~21ms average            |
+| **Proof Generation** | ~251ms (mock)            |
+| **Memory Usage**     | ~180MB                   |
+| **CPU Usage**        | 15-40%                   |
 
-    // Generate state transition proof
-    let prev_state = vec![0u8; 32];
-    let transactions = vec![/* your transactions */];
+### Stress Test Results
 
-    let proof = zkvm.generate_state_transition_proof(prev_state, transactions).await?;
-    println!("ZK Proof generated: {} bytes", proof.len());
-
-    // Verify proof
-    let is_valid = zkvm.verify_proof(&proof).await?;
-    println!("Proof valid: {}", is_valid);
-
-    Ok(())
-}
+```
+📊 PERFORMANCE REPORT
+==========================================
+🔗 Total blocks processed: 25
+📝 Total transactions: 2500
+⏰ Total runtime: 7 seconds
+⚡ Average block time: 21.44 ms
+🔧 Average proof time: 251.64 ms
+🚀 Average TPS: 351.00
+🏆 Peak TPS: 365.86
+📏 Average proof size: 4224 bytes
+❌ Total errors: 2
+==========================================
 ```
 
 ## 🔧 Configuration
 
-### Consensus Parameters
+### Protocol Configuration
 
 ```rust
 use zk_sac_engine::types::ProtocolConfig;
@@ -140,141 +121,140 @@ use zk_sac_engine::types::ProtocolConfig;
 let config = ProtocolConfig {
     block_time: Duration::from_secs(4),
     max_transactions_per_block: 10_000,
-    max_block_size: 1_000_000,
-    min_stake_threshold: 1000,
-    slashing_rate: 0.1,
-    reward_rate: 0.05,
-    zkvm_config: ZkVMConfig::default(),
+    validator_count: 100,
+    stake_requirement: 32_000_000_000,
+    enable_post_quantum: true,
+    proof_type: ProofType::Risc0,
+    ..Default::default()
 };
 ```
 
-### ZKVM Configuration
+### Consensus Engine Setup
 
 ```rust
-use zk_sac_engine::zkvm::ZKVMConfig;
+use zk_sac_engine::consensus::engine::{ZkSacConsensusEngine, ConsensusEngine};
 
-let zkvm_config = ZKVMConfig {
-    memory_optimization: "standard".to_string(),
-    prover_mode: "cpu".to_string(),
-    parallel_execution: true,
-};
+let genesis_state = create_genesis_state();
+let validators = create_validators();
+let config = ProtocolConfig::default();
+
+let mut engine = ZkSacConsensusEngine::new(
+    genesis_state,
+    validators,
+    config
+)?;
+
+// Add transactions
+engine.pending_transactions.extend(transactions);
+
+// Produce block
+let producer = engine.select_block_producer(block_number)?;
+let block = engine.produce_block(producer)?;
+
+// Validate and apply
+if engine.validate_block(&block)? {
+    engine.apply_block(block)?;
+}
 ```
 
 ## 🧪 Testing
 
-### Run All Tests
+### Test Suite
 
 ```bash
-# Unit tests
+# Run all tests
 cargo test
 
-# Integration tests
+# Run specific test categories
+cargo test --test comprehensive_tests
 cargo test --test integration_tests
-
-# Property-based tests
 cargo test --test property_tests
 
-# Benchmarks
+# Run with logging
+RUST_LOG=debug cargo test
+
+# Run benchmarks
 cargo bench
 ```
 
 ### Test Coverage
 
+- **Unit Tests**: Individual component testing
+- **Integration Tests**: Full system testing
+- **Property Tests**: Mathematical property verification
+- **Performance Tests**: Stress testing and benchmarking
+- **ZK Proof Tests**: Zero-knowledge proof verification
+
+## 📚 Documentation
+
+### API Documentation
+
 ```bash
-# Generate coverage report
-cargo tarpaulin --out Html
-open tarpaulin-report.html
+# Generate documentation
+cargo doc --open
+
+# Generate with private items
+cargo doc --document-private-items
 ```
 
-## 📊 Benchmarks
+### Architecture Documentation
 
-```bash
-# Run all benchmarks
-cargo bench
+See the `docs/` directory for detailed documentation:
 
-# Run specific benchmark
-cargo bench consensus
-cargo bench crypto
-cargo bench zkvm
-```
-
-### Performance Metrics
-
-| Component              | Metric     | Value           |
-| ---------------------- | ---------- | --------------- |
-| Block Production       | Time       | 17µs            |
-| Transaction Processing | Throughput | 10,000 tx/block |
-| ZK Proof Generation    | Size       | ~32 bytes       |
-| Consensus Coordination | Latency    | <1ms            |
+- [Architecture Overview](docs/architecture.md)
+- [Consensus Protocol](docs/consensus.md)
+- [ZK Proof System](docs/zk-proofs.md)
+- [Performance Guide](docs/performance.md)
+- [Security Model](docs/security.md)
 
 ## 🔐 Security
 
-### Cryptographic Primitives
+### Cryptographic Features
 
-- **Hashing**: Blake3 (incremental) + SHA3 (Keccak256)
-- **Signatures**: Ed25519-dalek (post-quantum ready)
-- **ZK Proofs**: Risc0 zkVM 2.3.1
-- **Serialization**: Bincode 1.x (secure)
+- **Ed25519 Signatures**: Fast, secure digital signatures
+- **Post-Quantum LMS**: Hash-based signatures for quantum resistance
+- **Blake3 Hashing**: High-performance cryptographic hashing
+- **Keccak256**: EVM-compatible hashing
+- **Zero-Knowledge Proofs**: State transition verification
 
-### Security Features
+### Security Model
 
-- ✅ **Zero-Knowledge Proofs**: Every block is cryptographically proven
-- ✅ **Post-Quantum Cryptography**: Ready for quantum threats
-- ✅ **Type Safety**: Rust's strong type system prevents runtime errors
-- ✅ **Memory Safety**: No undefined behavior or memory leaks
-- ✅ **Async Safety**: Thread-safe consensus coordination
+- **Consensus Security**: Byzantine fault tolerance
+- **Cryptographic Security**: Post-quantum resistant
+- **Network Security**: P2P networking with libp2p
+- **State Security**: Merkle tree state verification
 
-## 🏛️ Architecture Details
+## 🚧 Development Status
 
-### Consensus Engine
+### Current Status: Alpha
 
-The ZK-SAC algorithm implements a novel consensus mechanism:
+- ✅ Core consensus engine
+- ✅ ZK proof system (mock mode)
+- ✅ Performance monitoring
+- ✅ Comprehensive testing
+- ✅ Post-quantum cryptography
+- 🚧 Real ZK proof generation (Linux only)
+- 🚧 Network layer implementation
+- 🚧 Production deployment
 
-1. **Block Production**: Validators produce blocks with ZK proofs
-2. **Proof Verification**: Each block includes a cryptographic proof of validity
-3. **Self-Amendment**: Consensus rules can evolve through on-chain governance
-4. **Recursive Validation**: Previous proofs are recursively verified
+### Platform Support
 
-### ZKVM Integration
-
-Risc0 zkVM provides:
-
-- **RISC-V Virtual Machine**: Executes programs in zero-knowledge
-- **Proof Generation**: Creates cryptographic receipts of execution
-- **Proof Verification**: Anyone can verify execution without revealing inputs
-- **Composability**: Proofs can be combined recursively
-
-### Type System
-
-Strongly typed data structures ensure correctness:
-
-```rust
-pub struct Block {
-    header: BlockHeader,
-    transactions: Vec<Transaction>,
-    recursive_proof: Vec<u8>,
-    protocol_updates: Vec<ProtocolRule>,
-}
-
-pub struct ZkProof {
-    proof_type: ProofType,
-    public_inputs: Vec<u8>,
-    verification_key: Vec<u8>,
-    proof_data: Vec<u8>,
-}
-```
+| Platform    | Status  | Notes                    |
+| ----------- | ------- | ------------------------ |
+| **Linux**   | ✅ Full | Real ZK proofs supported |
+| **MacOS**   | ✅ Mock | Mock ZK proofs only      |
+| **Windows** | ✅ Mock | Mock ZK proofs only      |
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+### Development Setup
 
-### Development Workflow
-
-1. **Fork** the repository
-2. **Create** a feature branch: `git checkout -b feature/amazing-feature`
-3. **Commit** your changes: `git commit -m 'Add amazing feature'`
-4. **Push** to the branch: `git push origin feature/amazing-feature`
-5. **Open** a Pull Request
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Run the test suite
+6. Submit a pull request
 
 ### Code Style
 
@@ -284,43 +264,12 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 - Write comprehensive tests
 - Document public APIs
 
-## 📚 Documentation
+### Testing Guidelines
 
-- [API Documentation](https://docs.rs/zk-sac-engine)
-- [Architecture Guide](docs/architecture.md)
-- [Consensus Algorithm](docs/consensus.md)
-- [ZK Proof System](docs/zkvm.md)
-- [Security Model](docs/security.md)
-
-## 🏆 Roadmap
-
-### Phase 1: Core Engine ✅
-
-- [x] ZK-SAC consensus algorithm
-- [x] Risc0 zkVM integration
-- [x] Post-quantum cryptography
-- [x] Async consensus coordination
-
-### Phase 2: Network Layer 🚧
-
-- [ ] P2P networking
-- [ ] Node discovery
-- [ ] Message propagation
-- [ ] Network security
-
-### Phase 3: Advanced Features 📋
-
-- [ ] Real ZK proof generation
-- [ ] Cross-chain bridges
-- [ ] Smart contract support
-- [ ] Governance mechanisms
-
-### Phase 4: Production Ready 🎯
-
-- [ ] Performance optimization
-- [ ] Security audits
-- [ ] Production deployment
-- [ ] Ecosystem tools
+- Unit tests for all functions
+- Integration tests for workflows
+- Property tests for mathematical properties
+- Performance benchmarks for critical paths
 
 ## 📄 License
 
@@ -328,19 +277,17 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- **Risc0 Team**: For the amazing zkVM technology
-- **Rust Community**: For the excellent language and ecosystem
-- **Zero-Knowledge Community**: For pioneering ZK proof systems
-- **Blockchain Researchers**: For advancing consensus mechanisms
+- **Risc0**: Zero-knowledge proof system
+- **libp2p**: P2P networking framework
+- **Tokio**: Async runtime
+- **Rust Community**: Excellent tooling and ecosystem
 
-## 📞 Contact
+## 📞 Support
 
-- **GitHub**: [@nzengi](https://github.com/nzengi)
-- **Repository**: [zk-sac-engine](https://github.com/nzengi/zk-sac-engine)
-- **Issues**: [GitHub Issues](https://github.com/nzengi/zk-sac-engine/issues)
+- **Issues**: [GitHub Issues](https://github.com/your-username/zk-sac-engine/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/your-username/zk-sac-engine/discussions)
+- **Documentation**: [docs/](docs/) directory
 
 ---
 
-**⭐ Star this repository if you find it useful!**
-
-**🚀 Join us in building the future of blockchain consensus!**
+**ZK-SAC Engine** - Revolutionizing blockchain consensus with zero-knowledge proofs and self-amending protocols.

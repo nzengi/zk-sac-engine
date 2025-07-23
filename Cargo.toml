@@ -3,6 +3,9 @@ name = "zk-sac-engine"
 version = "0.1.0"
 edition = "2021"
 
+[build-dependencies]
+risc0-build = "2.3.1"
+
 [dependencies]
 # Core serialization and utilities
 serde = { version = "1.0.219", features = ["derive"] }
@@ -17,6 +20,7 @@ rand = "0.8"
 ed25519-dalek = { version = "2.2.0", features = ["rand_core", "serde"] }
 
 # ZK and zkVM - Risc0 2.3.1 (latest stable)
+# Note: Using mock implementation on MacOS due to build issues
 risc0-zkvm = { version = "2.3.1", features = ["prove"], optional = true }
 
 # Post-quantum cryptography
@@ -47,6 +51,7 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 
 [dev-dependencies]
 tokio-test = "0.4"
+tracing-test = "0.2"
 # Testing framework
 criterion = { version = "0.5", features = ["html_reports", "async_tokio"] }
 proptest = "1.0"
@@ -70,7 +75,7 @@ fake = { version = "2.9", features = ["derive", "chrono"] }
 arbitrary = { version = "1.3", features = ["derive"] }
 
 [features]
-default = ["risc0"]
+default = []
 risc0 = ["risc0-zkvm"]
 
 # Removed bin targets for now 
@@ -80,9 +85,13 @@ name = "consensus_benchmarks"
 harness = false
 
 [[bench]]
-name = "crypto_benchmarks"  
+name = "crypto_benchmarks"
 harness = false
 
 [[bench]]
 name = "zkvm_benchmarks"
-harness = false 
+harness = false
+
+[[bin]]
+name = "performance-demo"
+path = "src/main_with_performance.rs" 

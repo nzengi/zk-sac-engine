@@ -48,7 +48,7 @@ impl ZkSacConsensusEngine {
         info!("   🏗️  Max TX per block: {}", config.max_transactions_per_block);
         
         let total_stake = initial_validators.iter().map(|v| v.stake).sum();
-
+        
         #[cfg(feature = "risc0")]
         let zkvm_engine = Box::new(Risc0Executor::new()?);
         let signature_engine = SignatureEngine::new();
@@ -101,7 +101,7 @@ impl ZkSacConsensusEngine {
                 storage: std::collections::HashMap::new(),
             }).balance += tx.value;
         }
-        
+
         // Generate zkVM proof for all executions (mock for now - async makes it complex)
         let proof = vec![0; 32]; // Mock proof
         

@@ -2,6 +2,7 @@ pub mod types;
 pub mod consensus;
 pub mod crypto;
 pub mod zkvm;
+pub mod performance;
 pub mod serialization;
 pub mod async_utils;
 

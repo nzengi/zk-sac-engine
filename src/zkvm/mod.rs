@@ -14,6 +14,7 @@ use risc0_zkvm::{
 };
 
 pub mod programs;
+pub mod real_proofs;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ZKVMConfig {
