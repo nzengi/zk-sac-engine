@@ -1,11 +1,6 @@
 # Rust build artifacts
 /target/
-**/*.rs.bk
-*.pdb
-
-# Cargo
 Cargo.lock
-Cargo.toml.bak
 
 # IDE and editor files
 .vscode/
@@ -13,22 +8,11 @@ Cargo.toml.bak
 *.swp
 *.swo
 *~
-.DS_Store
-Thumbs.db
 
-# Environment files
-.env
-.env.local
-.env.production
-.env.test
-
-# Logs
+# Logs and runtime data
 *.log
 logs/
-log/
-
-# Runtime data
-pids
+runtime/
 *.pid
 *.seed
 *.pid.lock
@@ -65,6 +49,12 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
+# dotenv environment variables file
+.env
+.env.test
+.env.local
+.env.production
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache
@@ -88,43 +78,35 @@ public
 tmp/
 temp/
 
-# Risc0 specific
+# Risc0 specific artifacts
 .risc0/
 risc0-cache/
+*.elf
+*.receipt
+*.proof
 
-# Performance data
-perf.data
-perf.data.old
+# Performance data and benchmarks
+benchmarks/
+performance_data/
+*.json.bench
 
-# Benchmark results
-benchmark-results/
-*.bench
-
-# Documentation build
-docs/build/
+# Documentation build outputs
 docs/_build/
+docs/.doctrees/
 
 # Test artifacts
 test-results/
 coverage-reports/
 
-# Docker
-.dockerignore
-Dockerfile.bak
-
-# Kubernetes
-*.yaml.bak
-*.yml.bak
+# Docker and Kubernetes
+Dockerfile.local
+docker-compose.override.yml
+*.kubeconfig
 
 # Backup files
 *.bak
 *.backup
 *.old
-
-# Archive files
-*.tar.gz
-*.zip
-*.rar
 
 # OS generated files
 .DS_Store
@@ -135,49 +117,13 @@ Dockerfile.bak
 ehthumbs.db
 Thumbs.db
 
-# Windows
-*.lnk
-
-# Linux
-*~
-
-# macOS
-.AppleDouble
-.LSOverride
-
-# Icon must end with two \r
-Icon
-
-# Thumbnails
-._*
-
-# Files that might appear in the root of a volume
-.DocumentRevisions-V100
-.fseventsd
-.Spotlight-V100
-.TemporaryItems
-.Trashes
-.VolumeIcon.icns
-.com.apple.timemachine.donotpresent
-
-# Directories potentially created on remote AFP share
-.AppleDB
-.AppleDesktop
-Network Trash Folder
-Temporary Items
-.apdisk
-
-# Rust specific
-**/*.rs.bk
-*.pdb
-
-# Cargo
-Cargo.lock
-Cargo.toml.bak
-
-# Generated files
-generated/
-*.generated.rs
+# Sensitive files
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+keys/
 
 # Local configuration
 config.local.toml
@@ -188,61 +134,55 @@ settings.local.json
 *.sqlite
 *.sqlite3
 
-# Key files (be careful with these)
-*.pem
-*.key
-*.crt
-*.p12
-*.pfx
+# Archive files
+*.tar.gz
+*.zip
+*.rar
 
-# Certificate files
-*.cer
-*.der
+# Compiled dynamic libraries
+*.so
+*.dylib
+*.dll
 
-# Private keys
-private/
-secrets/
-
-# Local development
-.local/
-dev/
-development/
-
-# Production builds
-dist/
-build/
-release/
-
-# Debug files
-*.dSYM/
-*.su
-*.idb
-*.pdb
+# Executables
+*.exe
+*.out
+*.app
 
 # Profiling data
 *.prof
-*.out
+*.flamegraph
 
 # Memory dumps
-*.dmp
-*.hprof
+*.dump
+*.core
 
-# Core dumps
-core
-core.*
+# Rust specific
+**/*.rs.bk
+*.pdb
 
-# Crash logs
-crash.log
-crash-*.log
+# Cargo registry index
+.cargo-index/
 
-# System files
-.fuse_hidden*
-.directory
-.Trash-*
-.nfs*
+# Cargo credentials
+.cargo-credentials
 
-# Application specific
-zk-sac-engine.log
-consensus.log
-zkvm.log
-performance.log 
+# Rustup toolchain
+.rustup/
+
+# Cargo home
+.cargo/
+
+# Generated bindings
+bindings/
+
+# WASM artifacts
+*.wasm
+pkg/
+
+# Generated documentation
+doc/
+
+# Local development
+.local/
+dev/ 

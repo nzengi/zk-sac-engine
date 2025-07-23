@@ -2,30 +2,36 @@
 
 ## Overview
 
-The **ZK-SAC (Zero-Knowledge Self-Amending Consensus)** protocol is a revolutionary consensus mechanism that combines zero-knowledge proofs with self-amending governance. This protocol provides cryptographic guarantees for state transitions while enabling decentralized protocol evolution.
+The ZK-SAC (Zero-Knowledge Self-Amending Consensus) protocol is a revolutionary consensus mechanism that combines zero-knowledge proofs with self-amending governance. This document describes the protocol design, implementation, and security model.
 
 ## Protocol Design
 
 ### Core Principles
 
-1. **Zero-Knowledge Proof of Validity**: Every block must include a ZK proof verifying the correctness of state transitions
-2. **Self-Amending Governance**: Protocol parameters can be updated through on-chain governance
-3. **Stake-Based Security**: Validators are selected based on their stake and performance
-4. **Byzantine Fault Tolerance**: Tolerates up to 1/3 malicious validators
-5. **High Performance**: Async processing for maximum throughput
+1. **Zero-Knowledge Proof of Validity**: Every block must include a cryptographic proof that validates the state transition
+2. **Self-Amending Governance**: Protocol parameters can be modified through on-chain voting
+3. **Stake-Based Security**: Validator selection and rewards based on stake
+4. **Immediate Finality**: ZK proofs provide instant finality without waiting periods
+5. **Quantum Resistance**: Post-quantum cryptographic primitives for future security
 
 ### Consensus Flow
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Validator     │    │   Block         │    │   ZK Proof      │
-│   Selection     │───▶│   Production    │───▶│   Generation    │
+│   Transaction   │    │   Validator     │    │   Block         │
+│     Pool        │───►│   Selection     │───►│   Production    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Transaction   │    │   Stake-Weighted│    │   ZK Proof      │
+│   Validation    │    │   Random        │    │   Generation    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          ▼                       ▼                       ▼
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Block         │    │   State         │    │   Chain         │
-│   Validation    │◀───│   Transition    │◀───│   Update        │
+│   Validation    │───►│   Application   │───►│   Extension     │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
@@ -33,39 +39,42 @@ The **ZK-SAC (Zero-Knowledge Self-Amending Consensus)** protocol is a revolution
 
 ### Stake-Weighted Random Selection
 
-Validators are selected using a stake-weighted random selection algorithm:
+Validators are selected using a stake-weighted random algorithm that ensures:
+
+- **Fairness**: Selection probability proportional to stake
+- **Security**: Higher stake provides higher security
+- **Decentralization**: Prevents stake concentration attacks
+- **Efficiency**: Fast selection algorithm
+
+### Selection Algorithm
 
 ```rust
-pub fn select_block_producer(&self, block_number: u64) -> Result<Address> {
-    // Calculate total stake
-    let total_stake: u64 = self.validators.iter()
-        .map(|v| v.stake)
-        .sum();
+pub fn select_block_producer(&self, block_number: u64) -> Result<Address, ConsensusError> {
+    let seed = self.compute_selection_seed(block_number);
+    let total_stake: u64 = self.validators.iter().map(|v| v.stake).sum();
 
-    // Generate deterministic random seed
-    let seed = self.compute_consensus_hash(block_number);
+    // Stake-weighted random selection
+    let mut rng = self.create_rng(seed);
+    let target = rng.gen_range(0..total_stake);
 
-    // Select validator based on stake weight
-    let mut cumulative_stake = 0u64;
-    let random_value = seed.as_u64() % total_stake;
-
+    let mut cumulative_stake = 0;
     for validator in &self.validators {
         cumulative_stake += validator.stake;
-        if random_value < cumulative_stake {
+        if cumulative_stake > target {
             return Ok(validator.address);
         }
     }
 
-    Err(anyhow!("No validator selected"))
+    Err(ConsensusError::NoValidatorsAvailable)
 }
 ```
 
 ### Validator Requirements
 
-- **Minimum Stake**: 32,000,000,000 tokens
-- **Performance Score**: Must maintain >90% performance
-- **Uptime**: Must be online for >95% of assigned slots
-- **Technical Requirements**: Must support ZK proof generation
+- **Minimum Stake**: 32,000 tokens required to become validator
+- **Active Status**: Validators must be online and responsive
+- **Performance**: Maintain minimum performance standards
+- **Reputation**: Good historical behavior record
 
 ## Block Production
 
@@ -76,108 +85,112 @@ pub struct Block {
     pub header: BlockHeader,
     pub transactions: Vec<Transaction>,
     pub zk_proof: ZkProof,
-    pub validator_signature: Vec<u8>,
-    pub timestamp: u64,
+    pub validator_signature: Signature,
+    pub governance_votes: Vec<GovernanceVote>,
 }
+```
 
+### Block Header
+
+```rust
 pub struct BlockHeader {
     pub block_number: u64,
-    pub prev_hash: BlockHash,
-    pub state_root: BlockHash,
-    pub transaction_root: BlockHash,
-    pub validator: Address,
+    pub parent_hash: BlockHash,
+    pub state_root: [u8; 32],
+    pub transaction_root: [u8; 32],
+    pub proof_root: [u8; 32],
     pub timestamp: u64,
+    pub validator: Address,
     pub difficulty: u64,
+    pub nonce: u64,
 }
 ```
 
 ### Block Production Process
 
-1. **Transaction Collection**: Gather transactions from the mempool
-2. **Transaction Validation**: Verify signatures and state consistency
-3. **State Transition**: Apply transactions to current state
-4. **ZK Proof Generation**: Generate proof of state transition correctness
-5. **Block Assembly**: Create block with transactions and proof
-6. **Block Signing**: Sign block with validator's private key
+1. **Transaction Selection**: Choose transactions from pool based on:
 
-### ZK Proof Integration
+   - Fee priority
+   - Transaction age
+   - Gas limit
+   - Block size constraints
 
-Every block must include a zero-knowledge proof verifying the correctness of state transitions:
+2. **State Transition**: Apply transactions to current state:
 
-```rust
-pub async fn produce_block(&mut self, producer: Address) -> Result<Block> {
-    // Select transactions for this block
-    let transactions = self.select_transactions_for_block()?;
+   - Validate transaction signatures
+   - Check account balances
+   - Execute transaction logic
+   - Update account states
 
-    // Generate ZK proof for state transition
-    let zk_proof = self.zkvm_executor.generate_state_transition_proof(
-        self.current_state.state_root,
-        &transactions,
-        self.current_state.block_number + 1,
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)?
-            .as_secs()
-    ).await?;
+3. **ZK Proof Generation**: Generate proof of state transition:
 
-    // Create block header
-    let header = BlockHeader {
-        block_number: self.current_state.block_number + 1,
-        prev_hash: self.current_state.state_root,
-        state_root: self.compute_new_state_root(&transactions),
-        transaction_root: self.compute_transaction_root(&transactions),
-        validator: producer,
-        timestamp: std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)?
-            .as_secs(),
-        difficulty: self.config.difficulty,
-    };
+   - Input: Previous state + transactions
+   - Output: New state + proof
+   - Verification: Cryptographic proof of correctness
 
-    // Sign block
-    let signature = self.sign_block(&header)?;
+4. **Block Assembly**: Create block with:
 
-    Ok(Block {
-        header,
-        transactions,
-        zk_proof,
-        validator_signature: signature,
-        timestamp: header.timestamp,
-    })
-}
-```
+   - Block header with metadata
+   - Selected transactions
+   - ZK proof
+   - Validator signature
+
+5. **Block Broadcast**: Send block to network for validation
 
 ## Block Validation
 
-### Validation Process
+### Validation Steps
 
-1. **Header Validation**: Verify block header consistency
-2. **Transaction Validation**: Verify all transaction signatures and state
-3. **ZK Proof Verification**: Verify the zero-knowledge proof
-4. **State Consistency**: Ensure state transition is valid
-5. **Validator Verification**: Verify block producer's authority
+1. **Header Validation**:
 
-### ZK Proof Verification
+   - Verify block number sequence
+   - Check parent hash
+   - Validate timestamp
+   - Verify validator selection
+
+2. **Transaction Validation**:
+
+   - Verify transaction signatures
+   - Check account balances
+   - Validate transaction format
+   - Verify gas limits
+
+3. **ZK Proof Verification**:
+
+   - Verify proof cryptographic soundness
+   - Check proof corresponds to transactions
+   - Validate state transition correctness
+   - Verify proof size and format
+
+4. **State Validation**:
+   - Verify state root computation
+   - Check account state consistency
+   - Validate Merkle tree structure
+   - Verify no double-spending
+
+### Validation Algorithm
 
 ```rust
-pub fn validate_block(&self, block: &Block) -> Result<bool> {
-    // Verify block header
-    if !self.verify_block_header(&block.header)? {
+pub fn validate_block(&self, block: &Block) -> Result<bool, ConsensusError> {
+    // 1. Header validation
+    if !self.validate_block_header(&block.header)? {
         return Ok(false);
     }
 
-    // Verify transactions
+    // 2. Transaction validation
     for tx in &block.transactions {
-        if !self.verify_transaction(tx)? {
+        if !self.validate_transaction(tx)? {
             return Ok(false);
         }
     }
 
-    // Verify ZK proof
-    if !self.zkvm_executor.verify_proof(&block.zk_proof).await? {
+    // 3. ZK proof verification
+    if !self.verify_zk_proof(&block.zk_proof, &block.transactions)? {
         return Ok(false);
     }
 
-    // Verify validator signature
-    if !self.verify_validator_signature(&block.header, &block.validator_signature)? {
+    // 4. State validation
+    if !self.validate_state_transition(&block)? {
         return Ok(false);
     }
 
@@ -189,45 +202,49 @@ pub fn validate_block(&self, block: &Block) -> Result<bool> {
 
 ### World State
 
-The global state is maintained as a Merkle tree:
+The world state represents the global blockchain state:
 
 ```rust
 pub struct WorldState {
     pub accounts: HashMap<Address, Account>,
-    pub global_nonce: u64,
-    pub state_root: BlockHash,
+    pub validators: Vec<Validator>,
+    pub protocol_config: ProtocolConfig,
+    pub governance_state: GovernanceState,
     pub block_number: u64,
-}
-
-pub struct Account {
-    pub balance: u64,
-    pub nonce: u64,
-    pub code: Vec<u8>,
-    pub storage: HashMap<Vec<u8>, Vec<u8>>,
+    pub state_root: [u8; 32],
 }
 ```
 
 ### State Transitions
 
-State transitions are verified through zero-knowledge proofs:
+State transitions are deterministic functions that transform the current state:
 
-1. **Pre-State**: Current state before transaction execution
-2. **Transaction Execution**: Apply transactions to state
-3. **Post-State**: New state after transaction execution
-4. **ZK Proof**: Cryptographic proof of transition correctness
+1. **Transaction Application**: Apply transaction effects to accounts
+2. **Validator Updates**: Update validator stakes and status
+3. **Protocol Updates**: Apply governance changes
+4. **State Root Update**: Recompute Merkle root
+
+### Merkle Tree State
+
+State is organized in a Merkle tree for efficient verification:
+
+- **Account State**: Account balances and data
+- **Validator State**: Validator stakes and status
+- **Protocol State**: Protocol parameters
+- **Governance State**: Governance proposals and votes
 
 ## Self-Amending Governance
 
-### Governance Process
+### Governance Mechanism
 
-The protocol can evolve through on-chain governance:
+The protocol includes a self-amending governance system:
 
-1. **Proposal Submission**: Validators can submit protocol change proposals
-2. **Voting Period**: Validators vote on proposals based on their stake
-3. **Execution**: Approved proposals are automatically executed
-4. **ZK Proof**: Governance changes are verified through ZK proofs
+1. **Proposal Creation**: Validators can propose protocol changes
+2. **Voting Period**: Validators vote on proposals
+3. **Threshold Requirements**: Supermajority required for approval
+4. **Automatic Execution**: Approved changes automatically apply
 
-### Governance Parameters
+### Governance Proposals
 
 ```rust
 pub struct GovernanceProposal {
@@ -236,94 +253,101 @@ pub struct GovernanceProposal {
     pub description: String,
     pub changes: Vec<ProtocolChange>,
     pub voting_period: u64,
-    pub required_quorum: u64,
-    pub required_majority: f64,
-}
-
-pub enum ProtocolChange {
-    BlockTime(u64),
-    MaxTransactionsPerBlock(u64),
-    ValidatorCount(u64),
-    StakeRequirement(u64),
-    EnablePostQuantum(bool),
-    ProofType(ProofType),
+    pub approval_threshold: u64,
+    pub votes_for: u64,
+    pub votes_against: u64,
+    pub status: ProposalStatus,
 }
 ```
+
+### Protocol Changes
+
+Common types of protocol changes:
+
+- **Block Time**: Adjust block production interval
+- **Validator Count**: Change number of validators
+- **Stake Requirements**: Modify minimum stake
+- **Fee Structure**: Adjust transaction fees
+- **Security Parameters**: Update cryptographic parameters
 
 ## Security Model
 
 ### Byzantine Fault Tolerance
 
-The protocol tolerates up to 1/3 malicious validators:
+The protocol tolerates Byzantine faults:
 
-- **Safety**: No two honest validators will commit conflicting blocks
-- **Liveness**: The protocol will continue to make progress
-- **Finality**: Committed blocks cannot be reverted
+- **Fault Tolerance**: Up to 1/3 malicious validators
+- **Liveness**: Network continues operating under faults
+- **Safety**: No conflicting blocks can be finalized
+- **Accountability**: Malicious behavior can be detected
 
 ### Economic Security
 
-Validators are incentivized to behave honestly:
+Security through economic incentives:
 
-- **Stake Slashing**: Malicious behavior results in stake loss
-- **Rewards**: Honest validators receive block rewards
-- **Performance Bonuses**: High-performing validators receive bonuses
+- **Stake Slashing**: Penalties for malicious behavior
+- **Reward Distribution**: Rewards for honest validation
+- **Stake Requirements**: Minimum stake for participation
+- **Reputation System**: Historical behavior tracking
 
 ### Cryptographic Security
 
-- **Digital Signatures**: Ed25519 for transaction and block authentication
-- **Zero-Knowledge Proofs**: Cryptographic guarantees for state transitions
-- **Hash Functions**: Blake3 and Keccak256 for data integrity
-- **Post-Quantum Security**: LMS signatures for quantum resistance
+Multiple layers of cryptographic protection:
+
+- **Digital Signatures**: Ed25519 for transaction authentication
+- **Post-Quantum Signatures**: LMS for quantum resistance
+- **Zero-Knowledge Proofs**: State transition verification
+- **Hash Functions**: Blake3 and Keccak256 for integrity
 
 ## Performance Characteristics
 
 ### Throughput
 
 - **Target TPS**: 1000+ transactions per second
-- **Current TPS**: 350+ (mock mode)
-- **Block Time**: 4 seconds (configurable)
-- **Max Transactions per Block**: 10,000 (configurable)
+- **Block Time**: 4-second intervals
+- **Block Size**: Up to 10,000 transactions per block
+- **Proof Generation**: Optimized ZK proof creation
 
 ### Latency
 
-- **Block Production**: ~21ms average
-- **ZK Proof Generation**: ~251ms (mock)
-- **Block Validation**: ~10ms
-- **State Transition**: ~5ms
+- **Block Finality**: Immediate with ZK proofs
+- **Transaction Confirmation**: Sub-second confirmation
+- **Network Propagation**: Optimized P2P communication
+- **Proof Verification**: Fast cryptographic verification
 
-### Resource Usage
+### Scalability
 
-- **Memory**: ~180MB per node
-- **CPU**: 15-40% utilization
-- **Network**: Minimal bandwidth requirements
-- **Storage**: Efficient state storage
+- **Horizontal Scaling**: Multiple validator nodes
+- **Vertical Scaling**: Optimized single-node performance
+- **State Sharding**: Partitioned state management
+- **Proof Aggregation**: Batched proof verification
 
 ## Protocol Parameters
 
-### Current Configuration
+### Core Parameters
 
 ```rust
 pub struct ProtocolConfig {
-    pub block_time: Duration,                    // 4 seconds
-    pub max_transactions_per_block: u64,         // 10,000
-    pub validator_count: u64,                    // 100
-    pub stake_requirement: u64,                  // 32,000,000,000
-    pub enable_post_quantum: bool,               // true
-    pub proof_type: ProofType,                   // Risc0
-    pub difficulty: u64,                         // 1
-    pub reward_per_block: u64,                   // 1,000,000
-    pub slash_amount: u64,                       // 1,000,000,000
+    pub block_time: Duration,
+    pub max_transactions_per_block: u32,
+    pub validator_count: u32,
+    pub stake_requirement: u64,
+    pub enable_post_quantum: bool,
+    pub proof_type: ProofType,
+    pub governance_enabled: bool,
+    pub voting_period: u64,
+    pub approval_threshold: u64,
 }
 ```
 
-### Parameter Updates
+### Default Values
 
-Protocol parameters can be updated through governance:
-
-1. **Proposal**: Validator submits parameter change proposal
-2. **Voting**: Validators vote on proposal
-3. **Execution**: Approved changes take effect
-4. **Verification**: Changes verified through ZK proofs
+- **Block Time**: 4 seconds
+- **Max Transactions**: 10,000 per block
+- **Validator Count**: 100 active validators
+- **Stake Requirement**: 32,000 tokens
+- **Voting Period**: 7 days
+- **Approval Threshold**: 67% supermajority
 
 ## Network Layer
 
@@ -331,43 +355,34 @@ Protocol parameters can be updated through governance:
 
 The consensus protocol operates over a P2P network:
 
-- **libp2p**: Decentralized networking framework
-- **Gossip Protocol**: Efficient block and transaction propagation
-- **Peer Discovery**: Automatic peer discovery and management
-- **Connection Management**: Robust connection handling
+1. **Block Propagation**: Efficient block broadcasting
+2. **Transaction Pool**: Shared transaction pool
+3. **Validator Communication**: Direct validator messaging
+4. **Governance Voting**: Secure voting mechanism
 
 ### Message Types
 
-```rust
-pub enum ConsensusMessage {
-    BlockProposal(Block),
-    BlockVote(BlockVote),
-    TransactionBroadcast(Transaction),
-    StateRequest(StateRequest),
-    StateResponse(StateResponse),
-    GovernanceProposal(GovernanceProposal),
-    GovernanceVote(GovernanceVote),
-}
-```
+- **Block Messages**: New block announcements
+- **Transaction Messages**: Transaction broadcasts
+- **Vote Messages**: Governance voting
+- **Sync Messages**: State synchronization
 
 ## Future Enhancements
 
-### Planned Features
+### Planned Improvements
 
-1. **Sharding**: Horizontal scaling through sharding
-2. **Cross-Chain**: Interoperability with other blockchains
-3. **Privacy**: Enhanced privacy features
-4. **Smart Contracts**: WASM-based smart contract execution
-5. **Layer 2**: Rollup and sidechain support
+1. **Advanced ZK Proofs**: More efficient proof systems
+2. **Cross-Chain Interoperability**: Bridge to other blockchains
+3. **Privacy Features**: Enhanced transaction privacy
+4. **Smart Contracts**: WASM-based contract execution
 
 ### Research Areas
 
-1. **Advanced ZK Proofs**: More efficient proof systems
-2. **Quantum Resistance**: Enhanced quantum-resistant cryptography
-3. **Consensus Optimization**: Improved consensus algorithms
-4. **Network Optimization**: Enhanced P2P networking
-5. **Governance Models**: Advanced governance mechanisms
+1. **Proof Aggregation**: Recursive proof composition
+2. **State Sharding**: Horizontal scaling through sharding
+3. **Quantum Resistance**: Enhanced post-quantum security
+4. **Formal Verification**: Mathematical correctness proofs
 
 ---
 
-The ZK-SAC consensus protocol represents a significant advancement in blockchain technology, combining the security of zero-knowledge proofs with the flexibility of self-amending governance.
+The ZK-SAC consensus protocol represents a significant advancement in blockchain consensus mechanisms, combining the security of zero-knowledge proofs with the flexibility of self-amending governance.

@@ -2,297 +2,295 @@
 
 ## Overview
 
-ZK-SAC Engine implements a revolutionary Layer-1 blockchain with **Zero-Knowledge Proof of Validity** consensus mechanism. The architecture is designed for high performance, security, and scalability.
+The ZK-SAC Engine implements a revolutionary Layer-1 blockchain consensus mechanism that combines zero-knowledge proofs with self-amending governance. This document describes the overall system architecture, core components, and their interactions.
 
 ## System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    ZK-SAC Engine                            │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │   Network   │  │  Consensus  │  │    ZKVM     │         │
-│  │   Layer     │  │   Engine    │  │   System    │         │
-│  └─────────────┘  └─────────────┘  └─────────────┘         │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │   Crypto    │  │ Performance │  │    Types    │         │
-│  │   Engine    │  │  Monitoring │  │   System    │         │
-│  └─────────────┘  └─────────────┘  └─────────────┘         │
-├─────────────────────────────────────────────────────────────┤
-│                    Async Runtime                            │
-│                    (Tokio)                                  │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                        ZK-SAC Engine                           │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
+│  │ Consensus   │  │ ZKVM        │  │ Performance │            │
+│  │ Engine      │◄─┤ System      │◄─┤ Monitor     │            │
+│  └─────────────┘  └─────────────┘  └─────────────┘            │
+│         │                 │                 │                  │
+│         ▼                 ▼                 ▼                  │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
+│  │ Cryptography│  │ Guest       │  │ Async       │            │
+│  │ Engine      │  │ Programs    │  │ Utils       │            │
+│  └─────────────┘  └─────────────┘  └─────────────┘            │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        Core Types                              │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
+│  │ WorldState  │  │ Block       │  │ Transaction │            │
+│  └─────────────┘  └─────────────┘  └─────────────┘            │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
+│  │ Validator   │  │ Address     │  │ Protocol    │            │
+│  │ Set         │  └─────────────┘  │ Config      │            │
+│  └─────────────┘                   └─────────────┘            │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Core Components
 
 ### 1. Consensus Engine (`src/consensus/`)
 
-The consensus engine implements the **ZK-SAC (Zero-Knowledge Self-Amending Consensus)** protocol.
+The consensus engine implements the ZK-SAC (Zero-Knowledge Self-Amending Consensus) protocol.
 
-#### Key Features:
+**Key Responsibilities:**
 
-- **Block Production**: Validator selection and block creation
-- **Block Validation**: ZK proof verification and state validation
-- **Self-Amending**: Protocol evolution through on-chain governance
-- **Async Processing**: High-performance async consensus operations
+- Block production and validation
+- Validator selection and rotation
+- State transition management
+- ZK proof integration
+- Self-amending governance
 
-#### Architecture:
+**Core Classes:**
 
-```rust
-pub struct ZkSacConsensusEngine {
-    current_state: WorldState,
-    validators: Vec<Validator>,
-    config: ProtocolConfig,
-    pending_transactions: Vec<Transaction>,
-    zkvm_executor: Risc0Executor,
-    // ... async coordination pools
-}
-```
+- `ZkSacConsensusEngine`: Main consensus engine
+- `ConsensusEngine`: Trait defining consensus interface
+- `BlockProducer`: Handles block creation
+- `BlockValidator`: Validates incoming blocks
 
-#### Consensus Flow:
+**Consensus Flow:**
 
-1. **Validator Selection**: Stake-weighted random selection
-2. **Block Production**: Transaction processing and ZK proof generation
-3. **Block Validation**: ZK proof verification and state transition validation
-4. **Block Application**: State update and chain extension
+1. **Transaction Pool**: Collects pending transactions
+2. **Validator Selection**: Selects next block producer
+3. **Block Production**: Creates block with ZK proof
+4. **Block Validation**: Verifies block and proof
+5. **State Application**: Updates world state
+6. **Governance**: Handles protocol amendments
 
 ### 2. ZKVM System (`src/zkvm/`)
 
 The Zero-Knowledge Virtual Machine system provides cryptographic proof generation and verification.
 
-#### Components:
+**Key Responsibilities:**
 
-- **Risc0Executor**: Risc0 zkVM integration
-- **Guest Programs**: RISC-V programs for state transition verification
-- **Proof Generation**: ZK proof creation and verification
-- **Real Proofs**: Actual ZK proof generation (Linux)
-- **Mock Proofs**: Simulation for development (MacOS/Windows)
+- State transition proof generation
+- Recursive proof composition
+- Guest program execution
+- Proof verification
+- Mock system for development
 
-#### ZK Proof Flow:
+**Core Classes:**
 
-```rust
-// State transition proof generation
-let proof = zkvm_executor.generate_state_transition_proof(
-    prev_state,
-    transactions,
-    block_number,
-    timestamp
-)?;
+- `Risc0Executor`: Risc0 zkVM integration
+- `RealZKProver`: Real ZK proof generation
+- `GuestProgram`: RISC-V guest programs
+- `StateTransition`: State transition logic
 
-// Proof verification
-let is_valid = zkvm_executor.verify_proof(&proof)?;
-```
+**ZK Proof Types:**
+
+- **State Transition Proofs**: Verify state changes
+- **Recursive Proofs**: Compose multiple proofs
+- **Block Production Proofs**: Prove block validity
+- **Governance Proofs**: Verify governance actions
 
 ### 3. Cryptography Engine (`src/crypto/`)
 
-Comprehensive cryptographic primitives for security and performance.
+The cryptography engine provides all cryptographic primitives and operations.
 
-#### Features:
+**Key Responsibilities:**
 
-- **Ed25519 Signatures**: Fast, secure digital signatures
-- **Post-Quantum LMS**: Hash-based signatures for quantum resistance
-- **Blake3 Hashing**: High-performance cryptographic hashing
+- Digital signature generation and verification
+- Cryptographic hashing
+- Post-quantum cryptography
+- Key management
+- Random number generation
+
+**Core Classes:**
+
+- `Hash`: Blake3 and Keccak256 hashing
+- `Signatures`: Ed25519 and LMS signatures
+- `KeyPair`: Public/private key management
+- `CryptoUtils`: Cryptographic utilities
+
+**Cryptographic Primitives:**
+
+- **Blake3**: Fast, secure hashing
+- **Ed25519**: Elliptic curve signatures
+- **LMS**: Post-quantum hash-based signatures
 - **Keccak256**: EVM-compatible hashing
-- **Multi-Signature Support**: Aggregated signature schemes
-
-#### Signature Types:
-
-```rust
-pub enum SignatureType {
-    Ed25519,        // Standard Ed25519 signatures
-    PostQuantum,    // LMS hash-based signatures
-}
-```
 
 ### 4. Performance Monitoring (`src/performance/`)
 
-Real-time performance monitoring and benchmarking system.
+The performance monitoring system tracks system metrics and provides benchmarking capabilities.
 
-#### Metrics:
+**Key Responsibilities:**
 
-- **TPS (Transactions Per Second)**: Throughput measurement
-- **Block Time**: Block production latency
-- **Proof Generation Time**: ZK proof creation time
-- **Memory Usage**: System resource consumption
+- Real-time performance metrics
+- Transaction throughput monitoring
+- System resource tracking
+- Benchmark execution
+- Performance data export
+
+**Core Classes:**
+
+- `PerformanceMonitor`: Real-time monitoring
+- `PerformanceTest`: Stress testing
+- `SystemBenchmark`: System benchmarks
+- `PerformanceSummary`: Performance reports
+
+**Metrics Tracked:**
+
+- **TPS**: Transactions per second
+- **Latency**: Transaction processing time
+- **Memory Usage**: System memory consumption
 - **CPU Usage**: Processor utilization
-- **Error Tracking**: System error monitoring
-
-#### Performance Data:
-
-```rust
-pub struct PerformanceMetrics {
-    pub block_production_time_ms: u64,
-    pub proof_generation_time_ms: u64,
-    pub validation_time_ms: u64,
-    pub transactions_per_second: f64,
-    pub proof_size_bytes: usize,
-    pub memory_usage_mb: f64,
-    pub cpu_usage_percent: f64,
-}
-```
+- **Error Rates**: Failure statistics
 
 ### 5. Type System (`src/types/`)
 
-Core data structures and type definitions.
+The type system defines all core data structures and their relationships.
 
-#### Key Types:
+**Key Responsibilities:**
 
-- **WorldState**: Global blockchain state
-- **Block**: Block structure with transactions and proofs
-- **Transaction**: Transaction data and signatures
-- **Validator**: Validator information and stake
-- **Address**: 20-byte account addresses
-- **BlockHash**: 32-byte block identifiers
+- Core data structure definitions
+- Serialization/deserialization
+- Type safety and validation
+- Protocol configuration
+- State management
+
+**Core Types:**
+
+- `WorldState`: Global blockchain state
+- `Block`: Block structure and metadata
+- `Transaction`: Transaction data and validation
+- `Validator`: Validator information and stake
+- `Address`: Account and validator addresses
+- `ProtocolConfig`: Protocol parameters
 
 ## Data Flow
 
-### Transaction Processing Flow
+### 1. Transaction Processing Flow
 
 ```
-1. Transaction Submission
-   ↓
-2. Transaction Validation
-   ↓
-3. Transaction Pool
-   ↓
-4. Block Production
-   ↓
-5. ZK Proof Generation
-   ↓
-6. Block Validation
-   ↓
-7. State Application
-   ↓
-8. Chain Update
+Transaction Pool → Consensus Engine → ZKVM → State Update → Block Production
+       │                │              │           │              │
+       ▼                ▼              ▼           ▼              ▼
+   Validation      Proof Gen      Execution    Merkle Tree   Block Header
 ```
 
-### Consensus Flow
+### 2. Block Production Flow
 
 ```
-1. Validator Selection
-   ↓
-2. Block Proposal
-   ↓
-3. ZK Proof Generation
-   ↓
-4. Block Broadcast
-   ↓
-5. Proof Verification
-   ↓
-6. Consensus Agreement
-   ↓
-7. State Transition
+Validator Selection → Transaction Selection → State Transition → ZK Proof → Block Creation
+        │                    │                      │              │              │
+        ▼                    ▼                      ▼              ▼              ▼
+   Stake Weight         Fee Priority          State Root      Proof Hash     Block Hash
+```
+
+### 3. Block Validation Flow
+
+```
+Block Reception → Header Validation → Proof Verification → State Verification → Block Application
+       │               │                    │                    │                    │
+       ▼               ▼                    ▼                    ▼                    ▼
+   Network         Timestamp           ZK Proof            Merkle Root         State Update
 ```
 
 ## Security Model
 
-### Cryptographic Security
+### 1. Consensus Security
 
-1. **Digital Signatures**: Ed25519 for transaction authentication
-2. **Post-Quantum Security**: LMS signatures for quantum resistance
-3. **Zero-Knowledge Proofs**: State transition verification
-4. **Hash Functions**: Blake3 and Keccak256 for data integrity
+- **Byzantine Fault Tolerance**: Tolerates up to 1/3 malicious validators
+- **Stake-Based Security**: Security proportional to total stake
+- **ZK Proof Security**: Cryptographic verification of state transitions
+- **Self-Amending Governance**: Protocol evolution through on-chain voting
 
-### Consensus Security
+### 2. Cryptographic Security
 
-1. **Byzantine Fault Tolerance**: Tolerates up to 1/3 malicious validators
-2. **Stake-Based Security**: Economic incentives for honest behavior
-3. **ZK Proof Verification**: Cryptographic guarantees for state transitions
-4. **Self-Amending Governance**: Decentralized protocol evolution
+- **Post-Quantum Resistance**: LMS signatures for quantum resistance
+- **Zero-Knowledge Proofs**: Cryptographic soundness guarantees
+- **Hash Function Security**: Blake3 and Keccak256 for different use cases
+- **Key Management**: Secure key generation and storage
 
-### Network Security
+### 3. Network Security
 
-1. **P2P Networking**: libp2p for decentralized communication
-2. **Message Authentication**: Cryptographic message verification
-3. **DDoS Protection**: Rate limiting and connection management
-4. **Privacy**: Zero-knowledge proofs for transaction privacy
+- **P2P Networking**: Decentralized peer-to-peer communication
+- **Validator Authentication**: Cryptographic validator identification
+- **Message Integrity**: Cryptographic message verification
+- **Sybil Resistance**: Stake-based validator selection
 
 ## Performance Characteristics
 
-### Current Performance (Mock Mode)
+### 1. Scalability
 
-| Metric         | Value  | Notes                         |
-| -------------- | ------ | ----------------------------- |
-| **TPS**        | 350+   | Transactions per second       |
-| **Block Time** | ~21ms  | Average block production time |
-| **Proof Time** | ~251ms | ZK proof generation (mock)    |
-| **Memory**     | ~180MB | System memory usage           |
-| **CPU**        | 15-40% | Processor utilization         |
+- **Horizontal Scaling**: Multiple validator nodes
+- **Vertical Scaling**: Optimized single-node performance
+- **State Sharding**: Partitioned state management
+- **Proof Aggregation**: Batched proof verification
 
-### Scalability Features
+### 2. Throughput
 
-1. **Async Processing**: Non-blocking consensus operations
-2. **Parallel Validation**: Concurrent transaction validation
-3. **Batch Processing**: Efficient transaction batching
-4. **Memory Optimization**: Efficient data structures
-5. **Proof Aggregation**: Recursive ZK proof composition
+- **Target TPS**: 1000+ transactions per second
+- **Block Time**: 4-second block intervals
+- **Proof Generation**: Optimized ZK proof creation
+- **State Updates**: Efficient Merkle tree updates
+
+### 3. Latency
+
+- **Block Finality**: Immediate finality with ZK proofs
+- **Transaction Confirmation**: Sub-second confirmation
+- **Network Latency**: Optimized P2P communication
+- **Proof Verification**: Fast proof validation
 
 ## Platform Support
 
-### Linux (Full Support)
+### 1. Linux (Production Ready)
 
-- ✅ Real ZK proof generation
-- ✅ GPU acceleration (CUDA)
-- ✅ Full performance optimization
-- ✅ Production deployment ready
+- **Full ZK Proofs**: Real Risc0 proof generation
+- **GPU Acceleration**: CUDA/OpenCL support
+- **Optimized Performance**: Native Linux optimizations
+- **Production Deployment**: Ready for production use
 
-### MacOS (Development Support)
+### 2. MacOS (Development Ready)
 
-- ✅ Mock ZK proof generation
-- ✅ Development and testing
-- ✅ Performance monitoring
-- ⚠️ Limited GPU acceleration
+- **Mock ZK Proofs**: Development-friendly mock system
+- **CPU-Only Mode**: No GPU acceleration
+- **Development Tools**: Full development environment
+- **Testing Support**: Comprehensive testing capabilities
 
-### Windows (Development Support)
+### 3. Windows (Development Ready)
 
-- ✅ Mock ZK proof generation
-- ✅ Development and testing
-- ✅ Performance monitoring
-- ⚠️ Limited GPU acceleration
+- **Mock ZK Proofs**: Development-friendly mock system
+- **Cross-Platform**: Windows compatibility
+- **Development Tools**: Full development environment
+- **Testing Support**: Comprehensive testing capabilities
 
 ## Development Architecture
 
-### Module Structure
+### 1. Module Organization
 
 ```
 src/
-├── consensus/           # Consensus engine
-│   ├── engine.rs       # Main consensus logic
-│   └── mod.rs          # Module exports
-├── crypto/             # Cryptography
-│   ├── hash.rs         # Hash functions
-│   ├── signatures.rs   # Digital signatures
-│   └── mod.rs          # Module exports
-├── zkvm/               # Zero-knowledge VM
-│   ├── mod.rs          # ZKVM interface
-│   ├── real_proofs.rs  # Real ZK proof generation
-│   └── programs/       # Guest programs
-├── performance/        # Performance monitoring
-│   └── mod.rs          # Performance metrics
-├── types/              # Core types
-│   ├── consensus.rs    # Consensus types
-│   ├── crypto.rs       # Crypto types
-│   ├── zkvm.rs         # ZKVM types
-│   └── mod.rs          # Type exports
-├── async_utils.rs      # Async utilities
-├── serialization.rs    # Data serialization
-└── lib.rs              # Library root
+├── consensus/          # Consensus engine
+├── crypto/            # Cryptography primitives
+├── zkvm/              # Zero-knowledge VM
+├── performance/       # Performance monitoring
+├── types/             # Core data types
+├── async_utils.rs     # Async utilities
+├── serialization.rs   # Data serialization
+└── lib.rs            # Library entry point
 ```
 
-### Testing Architecture
+### 2. Testing Architecture
 
 ```
 tests/
-├── comprehensive_tests.rs  # Full system tests
-├── integration_tests.rs    # Integration tests
-├── property_tests.rs       # Property-based tests
-├── basic_tests.rs          # Basic functionality tests
-└── types_only_tests.rs     # Type system tests
+├── basic_tests.rs           # Basic functionality tests
+├── comprehensive_tests.rs   # Full system integration
+├── integration_tests.rs     # Component integration
+├── property_tests.rs        # Mathematical properties
+└── types_only_tests.rs      # Type system tests
 ```
 
-### Benchmark Architecture
+### 3. Benchmarking Architecture
 
 ```
 benches/
@@ -303,22 +301,27 @@ benches/
 
 ## Future Architecture
 
-### Planned Enhancements
+### 1. Planned Enhancements
 
-1. **Network Layer**: Full P2P networking implementation
-2. **Smart Contracts**: WASM-based smart contract execution
-3. **Cross-Chain**: Interoperability with other blockchains
-4. **Privacy**: Enhanced privacy features
-5. **Governance**: Advanced on-chain governance mechanisms
+- **Network Layer**: Full P2P networking implementation
+- **Governance System**: On-chain governance mechanisms
+- **Economic Model**: Token economics and incentives
+- **Cross-Chain**: Interoperability with other blockchains
 
-### Scalability Roadmap
+### 2. Scalability Improvements
 
-1. **Sharding**: Horizontal scaling through sharding
-2. **Layer 2**: Rollup and sidechain support
-3. **Optimizations**: Performance optimizations
-4. **Hardware**: Hardware acceleration support
-5. **Research**: Advanced ZK proof systems
+- **State Sharding**: Partitioned state management
+- **Proof Aggregation**: Batched proof verification
+- **Parallel Processing**: Concurrent transaction processing
+- **Optimized Storage**: Efficient state storage
+
+### 3. Security Enhancements
+
+- **Advanced ZK Proofs**: More efficient proof systems
+- **Quantum Resistance**: Enhanced post-quantum security
+- **Formal Verification**: Mathematical correctness proofs
+- **Audit Integration**: Continuous security auditing
 
 ---
 
-This architecture provides a solid foundation for a revolutionary blockchain system that combines the security of zero-knowledge proofs with the flexibility of self-amending consensus.
+This architecture provides a solid foundation for a revolutionary blockchain consensus system that combines the security of zero-knowledge proofs with the flexibility of self-amending governance.
